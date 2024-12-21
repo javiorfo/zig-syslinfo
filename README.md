@@ -1,2 +1,2 @@
 # zig-syslinfo
-Linux sysinfo library in Zig
+*Linux sysinfo library in Zig*
