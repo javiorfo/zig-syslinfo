@@ -35,12 +35,12 @@ pub const MemInfo = struct {
     }
 
     pub fn percentageUsed(self: MemInfo) !u8 {
-        if (self.total == 0 or self.free == 0) {
-            return error.MemInfoZeroedError;
+        if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
+            return error.MemInfoUninitialized;
         }
         const used_mem = self.total - self.free - self.buffers - self.cached;
-        const used_ram_perc: u8 = @intFromFloat((@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0));
-        return used_ram_perc;
+        const used_ram_percentage: u8 = @intFromFloat((@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0));
+        return used_ram_percentage;
     }
 
     fn setValue(value: *usize, line: []const u8, section: []const u8) !void {
@@ -61,6 +61,7 @@ test "meminfo test" {
     try testing.expect(meminfo.free_swap != 0);
     try testing.expect(try meminfo.percentageUsed() <= 100);
 
+    // This is a badly initialization example
     const meminfo2 = MemInfo{};
-    try testing.expectError(error.MemInfoZeroedError, meminfo2.percentageUsed());
+    try testing.expectError(error.MemInfoUninitialized, meminfo2.percentageUsed());
 }

@@ -1,0 +1,1 @@
+pub const CpuInfo = struct {};

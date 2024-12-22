@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    _ = b.addModule("syslinfo", .{ .root_source_file = b.path("src/root.zig") });
+    _ = b.addModule("syslinfo", .{ .root_source_file = b.path("src/root.zig"), .link_libc = true });
 
     const lib_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/root.zig"),
