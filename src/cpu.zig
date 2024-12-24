@@ -73,3 +73,5 @@ pub const CpuInfo = struct {
         return res;
     }
 };
+
+test "cpuinfo test" {}

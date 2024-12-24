@@ -34,12 +34,12 @@ pub const MemInfo = struct {
         return meminfo;
     }
 
-    pub fn percentageUsed(self: MemInfo) !u8 {
+    pub fn percentageUsed(self: MemInfo) !f32 {
         if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
             return error.MemInfoUninitialized;
         }
         const used_mem = self.total - self.free - self.buffers - self.cached;
-        const used_ram_percentage: u8 = @intFromFloat((@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0));
+        const used_ram_percentage = (@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0);
         return used_ram_percentage;
     }
 
@@ -59,7 +59,7 @@ test "meminfo test" {
     try testing.expect(meminfo.buffers != 0);
     try testing.expect(meminfo.total_swap != 0);
     try testing.expect(meminfo.free_swap != 0);
-    try testing.expect(try meminfo.percentageUsed() <= 100);
+    try testing.expect(try meminfo.percentageUsed() <= 100.0);
 
     // This is a badly initialization example
     const meminfo2 = MemInfo{};
