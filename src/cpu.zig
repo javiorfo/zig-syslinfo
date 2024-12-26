@@ -1,17 +1,62 @@
 const std = @import("std");
 
-// TODO /proc/cpuinfo more info
+const stat_file = "/proc/stat";
+const cpu_file = "/proc/cpuinfo";
+
 pub const CpuInfo = struct {
-    const stat_file = "/proc/stat";
-    const update_interval = 100 * std.time.ns_per_ms;
+    vendor_id: []const u8,
+    cpu_family: u8,
+    model: u32,
+    model_name: []const u8,
+    microcode: []const u8,
+    cache_size: u32,
+    cpu_cores: u8,
 
-    pub fn percentageUsed() !f32 {
-        const prev_stats = try readCpuStats();
-        std.time.sleep(update_interval);
-        const curr_stats = try readCpuStats();
+    pub fn new() !void {
+        const file = try std.fs.openFileAbsolute(cpu_file, .{});
+        defer file.close();
 
-        const cpu_usage = calculateCpuUsage(prev_stats, curr_stats);
-        return cpu_usage;
+        const reader = file.reader();
+        var buffer: [1024]u8 = undefined;
+        var cpu_info = CpuInfo{};
+        while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
+            try setValue([]u8, &cpu_info.vendor_id, line, "vendor_id");
+
+            if (std.mem.startsWith(u8, line, "vendor_id")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                cpu_info.vendor_id = line[index.? + 2 ..];
+            } else if (std.mem.startsWith(u8, line, "cpu family")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("cpu family: {s}\n", .{line[index.? + 2 ..]});
+            } else if (std.mem.startsWith(u8, line, "model")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("model: {s}\n", .{line[index.? + 2 ..]});
+            } else if (std.mem.startsWith(u8, line, "model name")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("model name: {s}\n", .{line[index.? + 2 ..]});
+            } else if (std.mem.startsWith(u8, line, "microcode")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("microcode: {s}\n", .{line[index.? + 2 ..]});
+            } else if (std.mem.startsWith(u8, line, "cache size")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("cache size: {s}\n", .{line[index.? + 2 ..]});
+            } else if (std.mem.startsWith(u8, line, "cpu cores")) {
+                const index = std.mem.indexOf(u8, line, ":");
+                std.debug.print("cpu cores: {s}\n", .{line[index.? + 2 ..]});
+                break;
+            }
+        }
+    }
+
+    fn setValue(comptime T: type, value: *T, line: []const u8, section: []const u8) !void {
+        if (std.mem.startsWith(u8, line, section)) {
+            const index = std.mem.indexOf(u8, line, ":").? + 2;
+            value.* = switch (T) {
+                u8, u16, u32 => try std.fmt.parseInt(T, line[index..], 10),
+                f16, f32 => try std.fmt.parseFloat(T, line[index..]),
+                else => line[index..],
+            };
+        }
     }
 
     fn countCores() !u8 {
@@ -33,6 +78,19 @@ pub const CpuInfo = struct {
 
         return core_count;
     }
+};
+
+pub const CpuUsage = struct {
+    const update_interval = 100 * std.time.ns_per_ms;
+
+    pub fn percentageUsed() !f32 {
+        const prev_stats = try readCpuStats();
+        std.time.sleep(update_interval);
+        const curr_stats = try readCpuStats();
+
+        const cpu_usage = calculateCpuUsage(prev_stats, curr_stats);
+        return cpu_usage;
+    }
 
     fn readCpuStats() ![5]u64 {
         const file = try std.fs.openFileAbsolute(stat_file, .{});
@@ -53,11 +111,9 @@ pub const CpuInfo = struct {
                     cpu_times[i] = try std.fmt.parseInt(u64, value, 10);
                 }
                 return cpu_times;
-            } else {
-                error.NoCpuDataFromFile;
             }
         }
-        return error.InvalidData;
+        return error.CpuUsageInvalidData;
     }
 
     fn calculateCpuUsage(prev: [5]u64, curr: [5]u64) f32 {

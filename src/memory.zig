@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub const MemInfo = struct {
+pub const MemUsage = struct {
     total: usize = 0,
     free: usize = 0,
     available: usize = 0,
@@ -10,7 +10,7 @@ pub const MemInfo = struct {
     total_swap: usize = 0,
     free_swap: usize = 0,
 
-    pub fn new() !MemInfo {
+    pub fn new() !MemUsage {
         const file = try std.fs.openFileAbsolute("/proc/meminfo", .{});
         defer file.close();
 
@@ -20,7 +20,7 @@ pub const MemInfo = struct {
         const contents = buffer[0..bytes_read];
 
         var lines = std.mem.split(u8, contents, "\n");
-        var meminfo = MemInfo{};
+        var meminfo = MemUsage{};
         while (lines.next()) |line| {
             try setValue(&meminfo.total, line, "MemTotal:");
             try setValue(&meminfo.free, line, "MemFree:");
@@ -34,9 +34,9 @@ pub const MemInfo = struct {
         return meminfo;
     }
 
-    pub fn percentageUsed(self: MemInfo) !f32 {
+    pub fn percentageUsed(self: MemUsage) !f32 {
         if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
-            return error.MemInfoUninitialized;
+            return error.MemUsageUninitialized;
         }
         const used_mem = self.total - self.free - self.buffers - self.cached;
         const used_ram_percentage = (@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0);
@@ -51,17 +51,17 @@ pub const MemInfo = struct {
 };
 
 test "meminfo test" {
-    const meminfo = try MemInfo.new();
-    try testing.expect(meminfo.total != 0);
-    try testing.expect(meminfo.free != 0);
-    try testing.expect(meminfo.available != 0);
-    try testing.expect(meminfo.cached != 0);
-    try testing.expect(meminfo.buffers != 0);
-    try testing.expect(meminfo.total_swap != 0);
-    try testing.expect(meminfo.free_swap != 0);
-    try testing.expect(try meminfo.percentageUsed() <= 100.0);
+    const mem_usage = try MemUsage.new();
+    try testing.expect(mem_usage.total != 0);
+    try testing.expect(mem_usage.free != 0);
+    try testing.expect(mem_usage.available != 0);
+    try testing.expect(mem_usage.cached != 0);
+    try testing.expect(mem_usage.buffers != 0);
+    try testing.expect(mem_usage.total_swap != 0);
+    try testing.expect(mem_usage.free_swap != 0);
+    try testing.expect(try mem_usage.percentageUsed() <= 100.0);
 
     // This is a badly initialization example
-    const meminfo2 = MemInfo{};
-    try testing.expectError(error.MemInfoUninitialized, meminfo2.percentageUsed());
+    const mem_usage2 = MemUsage{};
+    try testing.expectError(error.MemUsageUninitialized, mem_usage2.percentageUsed());
 }
