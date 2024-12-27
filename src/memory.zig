@@ -1,7 +1,37 @@
 const std = @import("std");
 const testing = std.testing;
 
-pub const MemUsage = struct {
+pub fn usage() !MemUsage {
+    const file = try std.fs.openFileAbsolute("/proc/meminfo", .{});
+    defer file.close();
+
+    var buffer: [1024]u8 = undefined;
+    const bytes_read = try file.readAll(&buffer);
+
+    const contents = buffer[0..bytes_read];
+
+    var lines = std.mem.split(u8, contents, "\n");
+    var meminfo = MemUsage{};
+    while (lines.next()) |line| {
+        try setValue(&meminfo.total, line, "MemTotal:");
+        try setValue(&meminfo.free, line, "MemFree:");
+        try setValue(&meminfo.available, line, "MemAvailable:");
+        try setValue(&meminfo.cached, line, "Cached:");
+        try setValue(&meminfo.buffers, line, "Buffers:");
+        try setValue(&meminfo.total_swap, line, "SwapTotal:");
+        try setValue(&meminfo.free_swap, line, "SwapFree:");
+    }
+
+    return meminfo;
+}
+
+fn setValue(value: *usize, line: []const u8, section: []const u8) !void {
+    if (std.mem.startsWith(u8, line, section)) {
+        value.* = try std.fmt.parseInt(usize, std.mem.trim(u8, line[section.len..], " kB"), 10);
+    }
+}
+
+const MemUsage = struct {
     total: usize = 0,
     free: usize = 0,
     available: usize = 0,
@@ -9,30 +39,6 @@ pub const MemUsage = struct {
     buffers: usize = 0,
     total_swap: usize = 0,
     free_swap: usize = 0,
-
-    pub fn new() !MemUsage {
-        const file = try std.fs.openFileAbsolute("/proc/meminfo", .{});
-        defer file.close();
-
-        var buffer: [1024]u8 = undefined;
-        const bytes_read = try file.readAll(&buffer);
-
-        const contents = buffer[0..bytes_read];
-
-        var lines = std.mem.split(u8, contents, "\n");
-        var meminfo = MemUsage{};
-        while (lines.next()) |line| {
-            try setValue(&meminfo.total, line, "MemTotal:");
-            try setValue(&meminfo.free, line, "MemFree:");
-            try setValue(&meminfo.available, line, "MemAvailable:");
-            try setValue(&meminfo.cached, line, "Cached:");
-            try setValue(&meminfo.buffers, line, "Buffers:");
-            try setValue(&meminfo.total_swap, line, "SwapTotal:");
-            try setValue(&meminfo.free_swap, line, "SwapFree:");
-        }
-
-        return meminfo;
-    }
 
     pub fn percentageUsed(self: MemUsage) !f32 {
         if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
@@ -42,16 +48,10 @@ pub const MemUsage = struct {
         const used_ram_percentage = (@as(f32, @floatFromInt(used_mem)) / @as(f32, @floatFromInt(self.total))) * @as(f32, 100.0);
         return used_ram_percentage;
     }
-
-    fn setValue(value: *usize, line: []const u8, section: []const u8) !void {
-        if (std.mem.startsWith(u8, line, section)) {
-            value.* = try std.fmt.parseInt(usize, std.mem.trim(u8, line[section.len..], " kB"), 10);
-        }
-    }
 };
 
-test "meminfo test" {
-    const mem_usage = try MemUsage.new();
+test "memory" {
+    const mem_usage = try usage();
     try testing.expect(mem_usage.total != 0);
     try testing.expect(mem_usage.free != 0);
     try testing.expect(mem_usage.available != 0);

@@ -34,7 +34,7 @@ const DiskUsage = struct {
     }
 };
 
-test "diskinfo test" {
+test "disk" {
     const disk_usage = try usage("/");
     try testing.expect(disk_usage.blocks != 0);
     try testing.expect(disk_usage.free != 0);

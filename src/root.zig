@@ -1,13 +1,11 @@
 const std = @import("std");
 
-const cpu = @import("cpu.zig");
-pub const CpuUsage = cpu.CpuUsage;
-pub const CpuInfo = cpu.CpuInfo;
+pub const cpu = @import("cpu.zig");
 pub const disk = @import("disk.zig");
-pub const MemUsage = @import("memory.zig").MemUsage;
-pub const NetInfo = @import("network.zig").NetInfo;
-pub const ThermalInfo = @import("thermal.zig").ThermalInfo;
-pub const VolumeInfo = @import("volume.zig").VolumeInfo;
+pub const memory = @import("memory.zig");
+pub const thermal = @import("thermal.zig");
+pub const network = @import("network.zig");
+pub const volume = @import("volume.zig");
 
 test {
     std.testing.refAllDecls(@This());
