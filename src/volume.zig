@@ -54,12 +54,18 @@ fn state(sound_card: SoundCard) !State {
     return .{
         .volume = @intCast(vol_normalized),
         .muted = unmuted == 0,
+        .min = @intCast(vol_min),
+        .max = @intCast(vol_max),
+        .card_name = sound_card.name,
     };
 }
 
 const State = struct {
     volume: u8 = 0,
     muted: bool = false,
+    min: u64 = 0,
+    max: u64 = 0,
+    card_name: [:0]const u8,
 };
 
 const SoundCard = struct {
@@ -72,4 +78,7 @@ test "volume" {
     const s = try state(.{});
     try testing.expect(@TypeOf(s) == State);
     try testing.expect(s.volume > 0);
+    try testing.expect(s.min == 0);
+    try testing.expect(s.max > 0);
+    try testing.expectEqual(s.card_name, "default");
 }
