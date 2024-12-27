@@ -47,9 +47,14 @@ const ThermalInfo = struct {
 };
 
 pub fn info() !ThermalInfo {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     var thermalinfo = ThermalInfo{};
     for (0..8) |i| {
-        const file_path = try std.fmt.allocPrint(std.heap.page_allocator, thermal_file, .{i});
+        const file_path = try std.fmt.allocPrint(allocator, thermal_file, .{i});
+        defer allocator.free(file_path);
 
         const file = std.fs.openFileAbsolute(file_path, .{}) catch {
             break;
@@ -66,7 +71,12 @@ pub fn info() !ThermalInfo {
 }
 
 pub fn getTemperatureFromZone(zone: ZONE) !f32 {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const file_path = try std.fmt.allocPrint(std.heap.page_allocator, thermal_file, .{zone.getValue()});
+    defer allocator.free(file_path);
     const file = std.fs.openFileAbsolute(file_path, .{}) catch {
         return error.ZoneNotAvailable;
     };
