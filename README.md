@@ -42,7 +42,7 @@ pub fn main() !void {
     // THERMAL
     const thermal = syslinfo.thermal;
     const thermal_info = try thermal.info();
-    std.debug.print("THERMAL zone0 {d}\n", thermal_info.zone0);
+    std.debug.print("THERMAL zone0 {d}\n", thermal_info.zone0.?);
     std.debug.print("THERMAL zone1 {d}\n", try thermal.getTemperatureFromZone(thermal.ZONE.one));
 
     // MEMORY
