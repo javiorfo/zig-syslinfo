@@ -3,7 +3,7 @@ const c = @cImport({
     @cInclude("alsa/asoundlib.h");
 });
 
-fn state(sound_card: SoundCard) !State {
+pub fn state(sound_card: SoundCard) !State {
     var handle: ?*c.snd_mixer_t = null;
     defer if (handle) |h| {
         _ = c.snd_mixer_detach(h, sound_card.name.ptr);
