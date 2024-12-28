@@ -15,6 +15,8 @@ pub fn build(b: *std.Build) void {
     });
 
     lib_unit_tests.linkSystemLibrary("asound");
+    lib_unit_tests.linkSystemLibrary("libnm");
+    lib_unit_tests.linkSystemLibrary("glib-2.0");
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
 
