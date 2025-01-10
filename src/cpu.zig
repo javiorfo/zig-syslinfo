@@ -1,20 +1,40 @@
 const std = @import("std");
 
-const stat_file = "/proc/stat";
+/// The path to the CPU information file.
 const cpu_file = "/proc/cpuinfo";
+
+/// The path to the CPU usage statistics file.
+const stat_file = "/proc/stat";
+
+/// The interval in nanoseconds between CPU usage updates.
 const update_interval = 100 * std.time.ns_per_ms;
 
+/// Represents the CPU information.
 const CpuInfo = struct {
+    /// The CPU vendor ID.
     vendor_id: []const u8 = "",
+    /// The CPU family.
     cpu_family: u8 = 0,
+    /// The CPU model.
     model: u32 = 0,
+    /// The CPU model name.
     model_name: []const u8 = "",
+    /// The CPU microcode.
     microcode: []const u8 = "",
+    /// The CPU cache size.
     cache_size: []const u8 = "",
+    /// The number of CPU cores.
     cpu_cores: u8 = 0,
 };
 
+/// Retrieves the CPU information.
+///
+/// Returns a `CpuInfo` struct containing the CPU information.
 pub fn info() !CpuInfo {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     const file = try std.fs.openFileAbsolute(cpu_file, .{});
     defer file.close();
 
@@ -22,15 +42,15 @@ pub fn info() !CpuInfo {
     var buffer: [1024]u8 = undefined;
     var cpuinfo = CpuInfo{};
     while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
-        try setValue([]const u8, &cpuinfo.vendor_id, line, "vendor_id");
-        try setValue(u8, &cpuinfo.cpu_family, line, "cpu family");
+        try setValue(allocator, []const u8, &cpuinfo.vendor_id, line, "vendor_id");
+        try setValue(allocator, u8, &cpuinfo.cpu_family, line, "cpu family");
         if (cpuinfo.model == 0) {
-            try setValue(u32, &cpuinfo.model, line, "model");
+            try setValue(allocator, u32, &cpuinfo.model, line, "model");
         }
-        try setValue([]const u8, &cpuinfo.model_name, line, "model name");
-        try setValue([]const u8, &cpuinfo.microcode, line, "microcode");
-        try setValue([]const u8, &cpuinfo.cache_size, line, "cache size");
-        try setValue(u8, &cpuinfo.cpu_cores, line, "cpu cores");
+        try setValue(allocator, []const u8, &cpuinfo.model_name, line, "model name");
+        try setValue(allocator, []const u8, &cpuinfo.microcode, line, "microcode");
+        try setValue(allocator, []const u8, &cpuinfo.cache_size, line, "cache size");
+        try setValue(allocator, u8, &cpuinfo.cpu_cores, line, "cpu cores");
         if (cpuinfo.cpu_cores != 0) {
             break;
         }
@@ -38,17 +58,30 @@ pub fn info() !CpuInfo {
     return cpuinfo;
 }
 
-fn setValue(comptime T: type, value: *T, line: []const u8, section: []const u8) !void {
+/// Sets the value of a field in the `CpuInfo` struct.
+///
+/// - `allocator`: The memory allocator to use for dynamic memory allocation.
+/// - `T`: The type of the field to set.
+/// - `value`: A pointer to the field to be set.
+/// - `line`: The line of text containing the field value.
+/// - `section`: The section of the line that contains the field name.
+fn setValue(allocator: std.mem.Allocator, comptime T: type, value: *T, line: []const u8, section: []const u8) !void {
     if (std.mem.startsWith(u8, line, section)) {
         const index = std.mem.indexOf(u8, line, ":").? + 2;
         value.* = switch (T) {
             u8, u16, u32 => try std.fmt.parseInt(T, line[index..], 10),
             f16, f32 => try std.fmt.parseFloat(T, line[index..]),
-            else => try std.mem.Allocator.dupe(std.heap.page_allocator, u8, line[index..]),
+            else => try std.mem.Allocator.dupe(allocator, u8, line[index..]),
         };
     }
 }
 
+/// Calculates the percentage of CPU usage.
+///
+/// This function retrieves the CPU usage statistics twice, with a delay of `update_interval` nanoseconds between the two measurements.
+/// It then calculates the percentage of CPU usage based on the difference between the two measurements.
+///
+/// Returns the percentage of CPU usage as a `f32` value.
 pub fn percentageUsed() !f32 {
     const prev_stats = try usage();
     std.time.sleep(update_interval);
@@ -56,6 +89,11 @@ pub fn percentageUsed() !f32 {
     return calculateCpuUsage(prev_stats, curr_stats);
 }
 
+/// Retrieves the current CPU usage statistics.
+///
+/// This function reads the CPU usage statistics from the `/proc/stat` file and returns a `CpuUsage` struct containing the values.
+///
+/// Returns a `CpuUsage` struct with the current CPU usage statistics, or an error if the data is invalid.
 pub fn usage() !CpuUsage {
     const file = try std.fs.openFileAbsolute(stat_file, .{});
     defer file.close();
@@ -80,11 +118,17 @@ pub fn usage() !CpuUsage {
     return error.CpuUsageInvalidData;
 }
 
+/// Represents the CPU usage statistics.
 const CpuUsage = struct {
+    /// The time spent in user mode.
     user: u64,
+    /// The time spent in user mode with low priority (nice).
     nice: u64,
+    /// The time spent in system mode.
     system: u64,
+    /// The time spent in the idle task.
     idle: u64,
+    /// The time spent waiting for I/O to complete.
     iowait: u64,
 
     fn getTotal(self: CpuUsage) u64 {
@@ -92,6 +136,12 @@ const CpuUsage = struct {
     }
 };
 
+/// Calculates the CPU usage percentage based on the provided CPU usage statistics.
+///
+/// - `prev_stats`: The CPU usage statistics for the previous measurement.
+/// - `curr_stats`: The CPU usage statistics for the current measurement.
+///
+/// Returns the CPU usage percentage as a `f32` value.
 fn calculateCpuUsage(prev: CpuUsage, curr: CpuUsage) f32 {
     const prev_idle = prev.idle;
     const curr_idle = curr.idle;

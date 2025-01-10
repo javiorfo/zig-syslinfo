@@ -18,7 +18,7 @@ pub fn main() !void {
     std.debug.print("DISK blocks {d}\n", disk.blocks);
     std.debug.print("DISK files {d}\n", disk.files);
     std.debug.print("DISK files free {d}\n", disk.files_free);
-    std.debug.print("DISK perc used {d}%\n", try disk.percentageUsed());
+    std.debug.print("DISK perc used {d:.2}%\n", try disk.percentageUsed());
 
     // CPU
     const cpu = syslinfo.cpu;
@@ -37,13 +37,14 @@ pub fn main() !void {
     std.debug.print("CPU cores {d}\n", cpu_info.cpu_cores);
     std.debug.print("CPU family {d}\n", cpu_info.cpu_family);
     std.debug.print("CPU cache size {s}\n", cpu_info.cache_size);
-    std.debug.print("CPU perc used {d}%\n", try cpu.percentageUsed());
+    std.debug.print("CPU perc used {d:.2}%\n", try cpu.percentageUsed());
 
     // THERMAL
     const thermal = syslinfo.thermal;
     const thermal_info = try thermal.info();
     std.debug.print("THERMAL zone0 {d}\n", thermal_info.zone0.?);
     std.debug.print("THERMAL zone1 {d}\n", try thermal.getTemperatureFromZone(thermal.ZONE.one));
+    std.debug.print("THERMAL zone2 {d}\n", try thermal.getTemperatureFromZoneId(2));
 
     // MEMORY
     const memory = try syslinfo.memory.usage();
@@ -54,7 +55,7 @@ pub fn main() !void {
     std.debug.print("MEM available {d}\n", memory.available);
     std.debug.print("MEM free swap {d}\n", memory.free_swap);
     std.debug.print("MEM total swap {d}\n", memory.total_swap);
-    std.debug.print("MEM perc used {d}%\n", try memory.percentageUsed());
+    std.debug.print("MEM perc used {d:.2}%\n", try memory.percentageUsed());
 
     // VOLUME
     const vol = try syslinfo.volume.state(.{}); // Receives a struct (default values are "default" and "Master")

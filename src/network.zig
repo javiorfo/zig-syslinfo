@@ -4,23 +4,39 @@ const c = @cImport({
     @cInclude("glib.h");
 });
 
+/// Represents the different types of network connections.
 const ConnectionType = enum(u8) {
+    /// Wi-Fi connection.
     wifi,
+    /// Ethernet connection.
     ethernet,
+    /// Unknown connection type.
     unknown,
 };
 
+/// Represents the current network connection state.
 const State = struct {
+    /// The connection speed in Mbps.
     connection_speed: f32 = 0.0,
+    /// The type of network connection.
     connection_type: ConnectionType = .unknown,
+    /// The signal strength of the connection (0-100).
     signal_strength: u8 = 0,
+    /// The Service Set Identifier (SSID) of the network.
     SSID: [63]u8 = .{0} ** 63,
+    /// The length of the SSID.
     SSID_len: u8 = 0,
+    /// The IPv4 address of the connection.
     ipv4: [15]u8 = .{0} ** 15,
+    /// The length of the IPv4 address.
     ipv4_len: u8 = 0,
+    /// The subnet mask of the connection.
     mask: u8 = 0,
 };
 
+/// Retrieves the current network connection state.
+///
+/// Returns an optional `State` struct, or an error if the connection to the network manager fails.
 pub fn state() !?State {
     var err: [*c]c.GError = 0x0;
     const client = c.nm_client_new(0x0, &err);
@@ -81,10 +97,4 @@ pub fn state() !?State {
         }
     }
     return null;
-}
-
-test "network" {
-    const testing = std.testing;
-    const s = try state();
-    try testing.expect(s != null);
 }

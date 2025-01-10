@@ -3,6 +3,33 @@ const c = @cImport({
     @cInclude("alsa/asoundlib.h");
 });
 
+/// Represents the current state of the sound system.
+const State = struct {
+    /// The current volume level (0-100).
+    volume: u8 = 0,
+    /// Whether the sound is muted or not.
+    muted: bool = false,
+    /// The minimum volume level.
+    min: u64 = 0,
+    /// The maximum volume level.
+    max: u64 = 0,
+    /// The name of the sound card.
+    card_name: [:0]const u8,
+};
+
+/// Represents the configuration for a sound card.
+const SoundCard = struct {
+    /// The name of the sound card.
+    name: [:0]const u8 = "default",
+    /// The name of the sound control to use.
+    salem: [:0]const u8 = "Master",
+};
+
+/// Retrieves the current state of the sound system.
+///
+/// - `card`: The configuration for the sound card to use.
+///
+/// Returns a `State` struct containing the current state of the sound system.
 pub fn state(sound_card: SoundCard) !State {
     var handle: ?*c.snd_mixer_t = null;
     defer if (handle) |h| {
@@ -59,19 +86,6 @@ pub fn state(sound_card: SoundCard) !State {
         .card_name = sound_card.name,
     };
 }
-
-const State = struct {
-    volume: u8 = 0,
-    muted: bool = false,
-    min: u64 = 0,
-    max: u64 = 0,
-    card_name: [:0]const u8,
-};
-
-const SoundCard = struct {
-    name: [:0]const u8 = "default",
-    salem: [:0]const u8 = "Master",
-};
 
 test "volume" {
     const testing = std.testing;

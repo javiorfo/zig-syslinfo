@@ -1,6 +1,11 @@
 const std = @import("std");
 const testing = std.testing;
 
+/// Retrieves the current memory usage statistics.
+///
+/// This function reads the memory usage statistics from the `/proc/meminfo` file and returns a `MemUsage` struct containing the values.
+///
+/// Returns a `MemUsage` struct with the current memory usage statistics.
 pub fn usage() !MemUsage {
     const file = try std.fs.openFileAbsolute("/proc/meminfo", .{});
     defer file.close();
@@ -25,21 +30,37 @@ pub fn usage() !MemUsage {
     return meminfo;
 }
 
+/// Sets the value of a field in the `MemUsage` struct.
+///
+/// - `value`: A pointer to the field to be set.
+/// - `line`: The line of text containing the field value.
+/// - `section`: The section of the line that contains the field name.
 fn setValue(value: *usize, line: []const u8, section: []const u8) !void {
     if (std.mem.startsWith(u8, line, section)) {
         value.* = try std.fmt.parseInt(usize, std.mem.trim(u8, line[section.len..], " kB"), 10);
     }
 }
 
+/// Represents the current memory usage statistics.
 const MemUsage = struct {
+    /// The total amount of physical memory.
     total: usize = 0,
+    /// The amount of free physical memory.
     free: usize = 0,
+    /// The amount of memory available for new allocations.
     available: usize = 0,
+    /// The amount of memory used for caching.
     cached: usize = 0,
+    /// The amount of memory used for buffers.
     buffers: usize = 0,
+    /// The total amount of swap space.
     total_swap: usize = 0,
+    /// The amount of free swap space.
     free_swap: usize = 0,
 
+    /// Calculates the percentage of memory used.
+    ///
+    /// Returns the percentage of memory used as a `f32` value, or an error if the memory usage statistics are not initialized.
     pub fn percentageUsed(self: MemUsage) !f32 {
         if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
             return error.MemUsageUninitialized;
