@@ -84,7 +84,8 @@ pub fn main() !void {
 .dependencies = .{
     .syslinfo = .{
         .url = "https://github.com/javiorfo/zig-syslinfo/archive/refs/heads/master.tar.gz",            
-        .hash = "12205e9c419ae2e7da83811423f29864d15b776fa92a1453988206b4b94ce2a588c6",
+        // .hash = "hash suggested",
+        // the hash will be suggested by zig build
     },
 }
 ```
