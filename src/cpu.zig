@@ -104,8 +104,8 @@ pub fn usage() !CpuUsage {
 
     var lines = std.mem.splitSequence(u8, data, "\n");
     if (lines.next()) |line| {
-        if (std.mem.startsWith(u8, line, "cpu ")) {
-            var parts = std.mem.splitSequence(u8, line["cpu ".len + 1 ..], " ");
+        if (std.mem.startsWith(u8, line, "cpu")) {
+            var parts = std.mem.splitSequence(u8, line[getFirstNumber(line)..], " ");
             return .{
                 .user = try std.fmt.parseInt(u64, parts.next().?, 10),
                 .nice = try std.fmt.parseInt(u64, parts.next().?, 10),
@@ -116,6 +116,19 @@ pub fn usage() !CpuUsage {
         }
     }
     return error.CpuUsageInvalidData;
+}
+
+/// Retrieves the index of the first number ocurrence.
+///
+/// This function reads a []const u8 and returns the index of the first number ocurrence.
+/// Otherwise, returns 4 (taking "cpu " string as the default)
+fn getFirstNumber(str: []const u8) usize {
+    for (str, 0..) |char, i| {
+        if (std.ascii.isDigit(char)) {
+            return i;
+        }
+    }
+    return 4;
 }
 
 /// Represents the CPU usage statistics.

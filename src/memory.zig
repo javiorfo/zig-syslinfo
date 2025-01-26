@@ -62,7 +62,7 @@ const MemUsage = struct {
     ///
     /// Returns the percentage of memory used as a `f32` value, or an error if the memory usage statistics are not initialized.
     pub fn percentageUsed(self: MemUsage) !f32 {
-        if (self.total == 0 or self.free == 0 or self.buffers == 0 or self.cached == 0) {
+        if (self.total == 0 or self.free == 0) {
             return error.MemUsageUninitialized;
         }
         const used_mem = self.total - self.free - self.buffers - self.cached;
