@@ -25,35 +25,46 @@ const CpuInfo = struct {
     cache_size: []const u8 = "",
     /// The number of CPU cores.
     cpu_cores: u8 = 0,
+    /// The allocator.
+    allocator: std.mem.Allocator,
+
+    /// init function
+    pub fn init(allocator: std.mem.Allocator) CpuInfo {
+        return .{ .allocator = allocator };
+    }
+
+    /// deinit function to free strings
+    pub fn deinit(self: CpuInfo) void {
+        self.allocator.free(self.vendor_id);
+        self.allocator.free(self.model_name);
+        self.allocator.free(self.microcode);
+        self.allocator.free(self.cache_size);
+    }
 };
 
 /// Retrieves the CPU information.
 ///
 /// Returns a `CpuInfo` struct containing the CPU information.
 pub fn info() !CpuInfo {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
     const file = try std.fs.openFileAbsolute(cpu_file, .{});
     defer file.close();
 
     const reader = file.reader();
     var buffer: [1024]u8 = undefined;
-    var cpuinfo = CpuInfo{};
+    var cpuinfo = CpuInfo.init(std.heap.page_allocator);
+    const allocator = cpuinfo.allocator;
     while (try reader.readUntilDelimiterOrEof(&buffer, '\n')) |line| {
         try setValue(allocator, []const u8, &cpuinfo.vendor_id, line, "vendor_id");
         try setValue(allocator, u8, &cpuinfo.cpu_family, line, "cpu family");
-        if (cpuinfo.model == 0) {
-            try setValue(allocator, u32, &cpuinfo.model, line, "model");
-        }
+
+        if (cpuinfo.model == 0) try setValue(allocator, u32, &cpuinfo.model, line, "model");
+
         try setValue(allocator, []const u8, &cpuinfo.model_name, line, "model name");
         try setValue(allocator, []const u8, &cpuinfo.microcode, line, "microcode");
         try setValue(allocator, []const u8, &cpuinfo.cache_size, line, "cache size");
         try setValue(allocator, u8, &cpuinfo.cpu_cores, line, "cpu cores");
-        if (cpuinfo.cpu_cores != 0) {
-            break;
-        }
+
+        if (cpuinfo.cpu_cores != 0) break;
     }
     return cpuinfo;
 }
@@ -175,6 +186,7 @@ test "cpu" {
     try testing.expect(@TypeOf(try percentageUsed()) == f32);
 
     const cpuinfo = try info();
+    defer cpuinfo.deinit();
     try testing.expect(cpuinfo.vendor_id.len > 0);
     try testing.expect(cpuinfo.cpu_family > 0);
     try testing.expect(cpuinfo.model > 0);

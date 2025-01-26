@@ -30,6 +30,7 @@ pub fn main() !void {
     std.debug.print("CPU iowait {d}\n", .{cpu_usage.iowait});
 
     const cpu_info = try cpu.info();
+    defer cpu_info.deinit();
     std.debug.print("CPU vendor id {s}\n", .{cpu_info.vendor_id});
     std.debug.print("CPU model {d}\n", .{cpu_info.model});
     std.debug.print("CPU model name {s}\n", .{cpu_info.model_name});
